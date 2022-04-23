@@ -50,14 +50,14 @@ function show_mail(mail) {
     mailBlock.innerHTML = `<strong>FROM:</strong> ${mail.sender} ` +
         `<strong>SUBJECT:</strong> ${mail.subject} <strong>TIME:</strong> ${mail.timestamp}`;
     mailBlock.addEventListener('click', function () {
-        // If you click to mailBlock. It gives mail's id to show_letter() and change read mark to true
-        show_letter(mail.id);
+        // If you click to mailBlock. It gives mail's id to load_letter() and change read mark to true
+        load_letter(mail.id);
         change_status(mail.id, {read: true});
     });
     document.querySelector('#emails-view').append(mailBlock);
 }
 
-function show_letter(id) {
+function load_letter(id) {
     // Show #letter-view and hide other views
     document.querySelector('#emails-view').style.display = 'none';
     document.querySelector('#compose-view').style.display = 'none';
@@ -67,43 +67,55 @@ function show_letter(id) {
     fetch(`/emails/${id}`)
         .then(response => response.json())
         .then(letter => {
-            // Create letter's header with Sender, Recipients, Subject, Timestamp
-            const headerLetterBlock = document.createElement('div');
-            headerLetterBlock.innerHTML = `<h6><strong>FROM: </strong>${letter.sender}</h6>` +
-                `<h6><strong>TO: </strong>${letter.recipients}</h6>` +
-                `<h6><strong>SUBJECT: </strong>${letter.subject}</h6>` +
-                `<h6><strong>TIME: </strong>${letter.timestamp}</h6>`;
-            document.querySelector('#letter-view').append(headerLetterBlock);
-            // If it isn't mailbox named Sent, create button Archive/Unarchive
-            if (document.querySelector('#emails-view h3').innerHTML !== 'Sent') {
-                const buttonArchived = document.createElement('button');
-                buttonArchived.className = 'btn btn-outline-info btn-sm mr-1';
-                // If letter archived button gets name Unarchive
-                buttonArchived.innerText = letter.archived ? 'Unarchive' : 'Archive';
-                buttonArchived.addEventListener('click', function () {
-                    // If you click to button, function marks an email as archived or unarchived
-                    const markArchived = letter.archived ? {archived: false} : {archived: true};
-                    change_status(letter.id, markArchived)
-                    // Return to mailbox inbox
-                    load_mailbox('inbox');
-                });
-                document.querySelector('#letter-view').append(buttonArchived);
-            }
-            // Create button Reply
-            const buttonReply = document.createElement('button');
-            buttonReply.className = 'btn btn-outline-info btn-sm';
-            buttonReply.innerText = 'Reply';
-            buttonReply.addEventListener('click', function () {
-                reply_mail(letter);
-            });
-            document.querySelector('#letter-view').append(buttonReply);
-            // Create letter's body
-            const bodyLetter = document.createElement('p');
-            bodyLetter.innerHTML = `<br>${letter.body}`;
-            document.querySelector('#letter-view').append(bodyLetter);
+            show_letter(letter);
         }).catch(error => {
         console.log('Error:', error);
     });
+}
+
+function show_letter(letter){
+    // Create letter's header with Sender, Recipients, Subject, Timestamp
+    const headerLetterBlock = document.createElement('div');
+    headerLetterBlock.innerHTML = `<h6><strong>FROM: </strong>${letter.sender}</h6>` +
+        `<h6><strong>TO: </strong>${letter.recipients}</h6>` +
+        `<h6><strong>SUBJECT: </strong>${letter.subject}</h6>` +
+        `<h6><strong>TIMESTAMP: </strong>${letter.timestamp}</h6>`;
+    document.querySelector('#letter-view').append(headerLetterBlock);
+
+    // If it isn't mailbox named Sent, create button Archive/Unarchive
+    if (document.querySelector('#emails-view h3').innerHTML !== 'Sent') {
+        const buttonArchived = document.createElement('button');
+        buttonArchived.className = 'btn btn-outline-info btn-sm mr-1';
+        // If letter archived button gets name Unarchive
+        buttonArchived.innerText = letter.archived ? 'Unarchive' : 'Archive';
+        buttonArchived.addEventListener('click', function () {
+            // If you click to button, function marks an email as archived or unarchived
+            const markArchived = letter.archived ? {archived: false} : {archived: true};
+            change_status(letter.id, markArchived)
+            // Return to mailbox inbox with delay 0.1 seconds
+            setTimeout(load_mailbox, 100, 'inbox')
+        });
+        document.querySelector('#letter-view').append(buttonArchived);
+    }
+
+    // Create button Reply
+    const buttonReply = document.createElement('button');
+    buttonReply.className = 'btn btn-outline-info btn-sm';
+    buttonReply.innerText = 'Reply';
+    buttonReply.addEventListener('click', function () {
+        reply_mail(letter);
+    });
+    document.querySelector('#letter-view').append(buttonReply);
+
+    // Create horizontal line (hr element)
+    const hr = document.createElement('hr');
+    document.querySelector('#letter-view').append(hr);
+
+    // Create letter's body
+    const bodyLetter = document.createElement('div');
+    bodyLetter.innerText = `${letter.body}`;
+    bodyLetter.setAttribute('white-space', 'pre-line');
+    document.querySelector('#letter-view').append(bodyLetter);
 }
 
 function send_mail() {
@@ -118,9 +130,13 @@ function send_mail() {
         .then(response => response.json())
         .then(result => {
             // Print result
-            console.log(result);
-            // Return to mailbox sent
-            load_mailbox('sent');
+            if (result.message){
+                alert(result.message);
+                load_mailbox('sent');
+            }
+            if (result.error){
+                alert(result.error);
+            }
         })
         // Catch any errors and log them to the console
         .catch(error => {
@@ -134,6 +150,7 @@ function reply_mail(letter) {
     document.querySelector('#emails-view').style.display = 'none';
     document.querySelector('#compose-view').style.display = 'block';
     document.querySelector('#letter-view').style.display = 'none';
+
     // Pre-fill sender, subject, letter's body
     document.querySelector('#compose-recipients').value = letter.sender;
     document.querySelector('#compose-subject').value =
