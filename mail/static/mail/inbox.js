@@ -73,7 +73,7 @@ function load_letter(id) {
     });
 }
 
-function show_letter(letter){
+function show_letter(letter) {
     // Create letter's header with Sender, Recipients, Subject, Timestamp
     const headerLetterBlock = document.createElement('div');
     headerLetterBlock.innerHTML = `<h6><strong>FROM: </strong>${letter.sender}</h6>` +
@@ -129,14 +129,14 @@ function send_mail() {
     })
         .then(response => response.json())
         .then(result => {
-            // Print result
-            if (result.message){
-                alert(result.message);
+            // Alert result
+            if (result.message) {
                 load_mailbox('sent');
+                alert_message(result.message, true);
+            } else {
+                alert_message(result.error, false);
             }
-            if (result.error){
-                alert(result.error);
-            }
+            setTimeout(remove_alert_message, 3000);
         })
         // Catch any errors and log them to the console
         .catch(error => {
@@ -173,4 +173,16 @@ function change_status(id, mark) {
     }).catch(error => {
         console.log('Error:', error);
     });
+}
+
+function alert_message(message, status) {
+    const alertMessage = document.createElement('div');
+    alertMessage.className = status ? 'alert alert-success' : 'alert alert-danger';
+    alertMessage.setAttribute('role', 'alert');
+    alertMessage.innerText = message;
+    document.querySelector(status ? '#emails-view' : '#compose-view').prepend(alertMessage);
+}
+
+function remove_alert_message() {
+    document.querySelector('.alert').remove();
 }
